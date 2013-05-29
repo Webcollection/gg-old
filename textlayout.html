@@ -31,16 +31,36 @@
 </style>
 <div style="width: 900px; float: left;">
   <div id="ex"></div>
-  <button style="width: 900px; font-size: 25pt; font-family:Gill Sans;" id="btn">
+  <div><button style="width: 900px; font-size: 25pt; font-family:Gill Sans;" id="btn">
     Randomize layout
-  </button>
+  </button></div>
+  <h4>Description</h4>
+  <p>
+  This shows the label layout algorithm using simulated annealing described by Christensen, J. et al.
+  The high opacity rectangles are labels' final locations, whereas the semi-transparent rectangles were the original locations.
+  The points are the lower left corners of the original rectangle locations and represent points that rectangles are labelling.
+  </p>
+  <p>
+  Simulated annealing is a random algorithm, so it's not guaranteed to generate perfect labels.  As you may see, a few of the final
+  rectangles are still overlapping.  I think the number of overlaps can be reduced using the same compute time by focusing the randomization
+  on regions of high overlap.
+  </p>
+  <p>
+  The specification to generate this visualization is shown on the right
+  </p>
+
+  <h4>References</h4>
+  <p>
+  Christensen, J., Marks, J., and Shieber, S. (1995). An empirical study of algorithms for point-feature label placement. ACM Transactions on Graphics (TOG), 14, 203-232.
+  </p>
+
+
 </div>
 <div style="width: 20em; height: 100%; float: left; margin-left: 2em;">
   <h3>Specification <span id="toggle">toggle final layout</span></h3>
   <pre id="spec"></pre>
 </div>
 <div style="clear: both"></div>
-
 
 <script>
   var finalRects = {
