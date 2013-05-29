@@ -8,50 +8,55 @@
 <script src="../vendor/js/underscore.min.js"></script>
 <script src="../js/gg.js"></script>
 <script src="../js/prettify.js"></script>
+<style>
+  #plot {
+    width: 900px;
+    height: 500px;
+    float: left;
+  }
+  #spec {
+    float: left;
+    padding-left: 2em;
+  }
+  #spec pre {
+    font-family: consolas, arial, monospace;
+    font-size: 10pt;
+    border: none;
+    width: 20em;
+    height: auto;
+  }
+  .clear {
+    clear: both;
+  }
+</style>
 </head>
 <body style="width:100%">
 
   <div id="plot"></div>
-
-<div class="main">
-  <section>
-  <h1>Description</h1>
-  <p>
-  </p>
-
-  </section>
-
-</div>
-
-
-<script>
-  var floor500 = function(row) {
-    return Math.floor(row.get('d') / 500) * 500;
-  };
-
-  var spec = {
-    opts: { title: "Multi-layer faceted example" },
-    facets: {x: "f"},
+  <div id="spec">
+    <h4>Specification</h4>
+    <pre>
+  {
     layers: [
     // Histogram with 10 bins, rendering sum / 100
+    // "{XXX}" is a shortcut to execute XXX in a
+    // js environment with a row's values
+    // bound to variables with the corresponding attribute names.
     {
       geom:{
         type: "rect",
-        aes: {y: "{total/100}"}
+        aes: {
+          y: "{total/100}"
+        }
       },
-      aes: {
-        x: "d",
-        y: "e"
-      },
-      stat: {type:"bin", n:10}
+      stat: "bin"
     },
     // Boxplot collected into 4 bins
     {
       geom: "boxplot",
       aes: {
         x: floor500,
-        y: "e",
-        group: { color: floor500 }
+        group: { color: floor500, opacity: 0.5 }
       },
       stat: "boxplot"
     },
@@ -60,12 +65,10 @@
     {
       geom: "line",
       aes: {
-        x: "d",
-        y: "e",
         group: {color: "g", "stroke-width": 2}
       },
       stat: {
-        type:"loess", bw: 0.3, acc: 1e-12
+        type:"loess", bandwidth: 0.3
       },
       scales: {
         stroke: {
@@ -79,8 +82,6 @@
     {
       geom: "line",
       aes: {
-        x: "d",
-        y: "e",
         group: {
           color: "g",
           "stroke-opacity": 0.2
@@ -89,14 +90,48 @@
       pos: "stack"
     }
 
-    ]
+    ] ,
+    // place the common aesthetic mappings here
+    aes: {
+      x: "d",
+      y: "e"
+    },
+    scales: {"stroke-opacity": "identity", "fill-opacity": "identity"},
+    opts: {
+      width: 900,
+      height: 500,
+      title: "Multi-layer faceted example"
+    },
+    facets: {x: "f"}
+
   };
+
+    </pre>
+  </div>
+  <div class="clear"></div>
+
+<div class="main">
+  <section>
+  <h1>Description</h1>
+  <p>
+  </p>
+  </section>
+</div>
+</body>
+</html>
+
+<script>
+  var npts = 1000;
+  var block = Math.max(1, Math.floor(npts / 3 / 5));
+
+  var floor500 = function(row) {
+    return Math.floor(row.get('d') / block) * block;
+  };
+
 
 
   $(document).ready(function() {
     Math.seedrandom("zero");
-    var w = 900;
-    var h = 500;
     var ex   = function () {
       $("#plot").empty();
       return d3.select('#plot').append('span');
@@ -104,7 +139,6 @@
     var gauss = science.stats.distribution.gaussian();
 
 
-    var npts = 5000;
     bigdata = _.map(_.range(0, npts), function(d) {
       g = Math.floor(Math.random() * 3) + 1;
       f = Math.floor(Math.random() * 3);
@@ -116,12 +150,7 @@
 
 
 
-    if (!spec.options) {
-      spec.options = {} ;
-    }
-    spec.options.width = w;
-    spec.options.height = h;
-    console.log(spec);
+    eval("var spec = " + $("#spec pre").text())
     var plot = gg(spec);
     plot.render(ex(), bigdata);
 
@@ -132,5 +161,3 @@
 </script>
 
 
-</body>
-</html>
