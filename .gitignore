@@ -6,6 +6,5 @@ log
 node_modules
 out
 *~
-vendor/*
 test.js
 *.Rhistory
