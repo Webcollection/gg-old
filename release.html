@@ -2,6 +2,7 @@
 <head>
 <meta charset="utf-8">
 <title>The Grammar of Graphics</title>
+<link rel="stylesheet" type="text/css" href="http://www.mit.edu/~eugenewu/include/style.css"/>
 <link rel="stylesheet" type="text/css" href="../css/gg.css"/>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="../vendor/js/underscore.min.js"></script>
@@ -9,6 +10,19 @@
 <script src="../js/prettify.js"></script>
 </head>
 <body style="width:100%">
+
+  <div id="plot"></div>
+
+<div class="main">
+  <section>
+  <h1>Description</h1>
+  <p>
+  </p>
+
+  </section>
+
+</div>
+
 
 <script>
   var floor500 = function(row) {
@@ -84,8 +98,8 @@
     var w = 900;
     var h = 500;
     var ex   = function () {
-      $("body").empty();
-      return d3.select('body').append('span');
+      $("#plot").empty();
+      return d3.select('#plot').append('span');
     };
     var gauss = science.stats.distribution.gaussian();
 

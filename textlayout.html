@@ -2,13 +2,12 @@
 <head>
 <meta charset="utf-8">
 <title>The Grammar of Graphics</title>
+<link rel="stylesheet" type="text/css" href="http://www.mit.edu/~eugenewu/include/style.css"/>
 <link rel="stylesheet" type="text/css" href="./css/gg.css"/>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="./vendor/js/underscore.min.js"></script>
 <script src="./js/gg.js"></script>
 <script src="./js/prettify.js"></script>
-</head>
-<body style="width:100%">
 <style>
   #spec {
     font-family: consolas, arial, monospace;
@@ -29,12 +28,35 @@
     color: blue;
   }
 </style>
+
+</head>
+<body style="width:100%">
+    <div class="header">
+    <div class="nav">
+      <a href="http://www.mit.edu/~eugenewu/index.html" style="font-weight: bold; margin-right: 10px">
+      Eugene Wu
+      </a>
+    <a href="http://github.com/sirrice/gg">gg on GitHub</a>
+    </div>
+    </div>
+
 <div style="width: 900px; float: left;">
   <div id="ex"></div>
   <div><button style="width: 900px; font-size: 25pt; font-family:Gill Sans;" id="btn">
     Randomize layout
   </button></div>
-  <h4>Description</h4>
+
+</div>
+<div style="width: 20em; height: auto; float: left; margin-left: 2em;">
+  <h3>Specification <span id="toggle">toggle final layout</span></h3>
+  <pre id="spec"></pre>
+</div>
+<div style="clear: both"></div>
+
+
+<div class="main">
+  <section>
+  <h1>Description</h1>
   <p>
   This shows the label layout algorithm using simulated annealing described by Christensen, J. et al.
   The high opacity rectangles are labels' final locations, whereas the semi-transparent rectangles were the original locations.
@@ -49,18 +71,14 @@
   The specification to generate this visualization is shown on the right
   </p>
 
-  <h4>References</h4>
+  <h1>References</h1>
   <p>
   Christensen, J., Marks, J., and Shieber, S. (1995). An empirical study of algorithms for point-feature label placement. ACM Transactions on Graphics (TOG), 14, 203-232.
   </p>
 
+  </section>
 
 </div>
-<div style="width: 20em; height: 100%; float: left; margin-left: 2em;">
-  <h3>Specification <span id="toggle">toggle final layout</span></h3>
-  <pre id="spec"></pre>
-</div>
-<div style="clear: both"></div>
 
 <script>
   var finalRects = {
