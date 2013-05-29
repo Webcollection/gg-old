@@ -3,7 +3,7 @@
   <head>
     <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <link rel="stylesheet" type="text/css" href="css/gg.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="http://www.mit.edu/~eugenewu/include/style.css"/>
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -11,52 +11,64 @@
   </head>
 
   <body>
-    <div id="container">
+
+    <div class="header">
+    <div class="nav">
+      <a href="http://www.mit.edu/~eugenewu/index.html" style="font-weight: bold; margin-right: 10px">
+      Eugene Wu
+      </a>
+    <a href="http://github.com/sirrice/gg">gg on GitHub</a>
+    </div>
+    </div>
+
+    <div id="main">
+
       <div class="inner">
-
-        <header>
-          <h1>gg</h1>
-        </header>
-
-        <section id="downloads" class="clearfix">
-          <a href="https://github.com/sirrice/gg/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
-          <a href="https://github.com/sirrice/gg/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
-          <a href="https://github.com/sirrice/gg" id="view-on-github" class="button"><span>View on GitHub</span></a>
-        </section>
-
-        <hr>
 
         <section id="main_content">
 
 
-<p><a href="./textlayout.html">Check out an example of label placement using simulated annealing</a></p>
+<h1>See Examples</h1>
 
-<h2>
-<a name="setup" class="anchor" href="#setup"><span class="octicon octicon-link"></span></a>Setup</h2>
+<h2><a href="./textlayout.html">Label placement using simularted annealing</a></h2>
+<p>This is an interactive example of gg's label placement algorithm</p>
 
-<p>Install node</p>
+<h2><a href="./release.html">Multi-geometry example</a></h2>
+<p>
+  An example of rendering a dataset using lines, loess smoothed lines,
+  boxplots, and rectangles
+</p>
 
-<pre><code>brew install node
-</code></pre>
+<section>
+  <h1>
+  <a name="setup" class="anchor" href="#setup"><span class="octicon octicon-link"></span></a>Setup</h1>
 
-<p>Install gg</p>
+  <p>Install node</p>
 
-<pre><code>npm install
-</code></pre>
+  <pre><code>brew install node
+  </code></pre>
 
-<p>Install coffeescript</p>
+  <p>Install gg</p>
 
-<pre><code>brew install coffeescript</code></pre>
+  <pre><code>npm install
+  </code></pre>
 
-<p>Compile</p>
+  <p>Install coffeescript</p>
 
-<pre><code>cake build
+  <pre><code>brew install coffeescript</code></pre>
+
+  <p>Compile</p>
+
+  <pre><code>cake build
 cake release
-</code></pre>
+  </code></pre>
 
-        <footer>
-          gg is maintained by <a href="https://github.com/sirrice">sirrice</a><br>
-        </footer>
+</section>
+
+
+<footer>
+  gg is maintained by <a href="https://github.com/sirrice">sirrice</a><br>
+</footer>
 
 
       </div>
