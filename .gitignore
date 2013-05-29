@@ -1,0 +1,11 @@
+test/js/*.js
+*.swp
+build/*
+*/.DS_Store
+log
+node_modules
+out
+*~
+vendor/*
+test.js
+*.Rhistory
