@@ -4403,6 +4403,44 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
 
   })();
 
+  gg.util.MArray = (function(_super) {
+
+    __extends(MArray, _super);
+
+    function MArray() {
+      MArray.__super__.constructor.apply(this, arguments);
+      this.emptyidxs = [];
+    }
+
+    MArray.prototype.rm = function(o) {
+      var idx;
+      idx = _.indexOf(this, o);
+      return this.rmIdx(idx);
+    };
+
+    MArray.prototype.rmIdx = function(idx) {
+      if (idx >= 0 && idx < this.length) {
+        this[idx] = null;
+        return this.emptyidxs.push(idx);
+      }
+    };
+
+    MArray.prototype.add = function(o) {
+      var idx;
+      if (this.emptyidxs.length > 0) {
+        idx = this.emptyidxs.pop();
+        this[idx] = o;
+      } else {
+        idx = this.length;
+        this.push(o);
+      }
+      return idx;
+    };
+
+    return MArray;
+
+  })(Array);
+
   _ = require('underscore');
 
   gg.util.Graph = (function() {
@@ -4672,6 +4710,294 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
     };
 
     return Graph;
+
+  })();
+
+  gg.util.SpatialIndex = (function() {
+
+    function SpatialIndex(keyf, valf) {
+      this.keyf = keyf != null ? keyf : null;
+      this.valf = valf != null ? valf : null;
+      if (this.keyf == null) {
+        this.keyf = (function(box) {
+          return box;
+        });
+      }
+      if (this.valf == null) {
+        this.valf = (function(box) {
+          return box;
+        });
+      }
+      this.gbounds = null;
+      this.gboundsFixed = false;
+      this.cells = null;
+      this.ncells = null;
+      this.cellsize = null;
+      this.debug = false;
+    }
+
+    SpatialIndex.prototype.gridBounds = function(gbounds) {
+      this.gbounds = gbounds;
+      this.gboundsFixed = true;
+      return this;
+    };
+
+    SpatialIndex.prototype.cellSize = function(cellsize) {
+      this.cellsize = cellsize;
+      return this;
+    };
+
+    SpatialIndex.prototype.load = function(boxes) {
+      var _this = this;
+      this.boxes = new gg.util.MArray();
+      _.each(boxes, function(box) {
+        return _this.boxes.add(box);
+      });
+      if (!this.gboundsFixed) {
+        this.gbounds = null;
+      }
+      this.computeMetadata();
+      this.createIndex();
+      return this;
+    };
+
+    SpatialIndex.prototype.key = function(getter) {
+      if (getter == null) {
+        getter = null;
+      }
+      if (getter != null) {
+        if (!_.isFunction(getter)) {
+          getter = (function(box) {
+            return box[getter];
+          });
+        }
+        this.keyf = getter;
+      }
+      return this.keyf;
+    };
+
+    SpatialIndex.prototype.val = function(getter) {
+      if (getter == null) {
+        getter = null;
+      }
+      if (getter != null) {
+        if (!_.isFunction(getter)) {
+          getter = (function(box) {
+            return box[getter];
+          });
+        }
+        this.valf = getter;
+      }
+      return this.valf;
+    };
+
+    SpatialIndex.prototype.computeMetadata = function() {
+      var cellh, cellw, globalh, globalw, maxx, maxy, minboxh, minboxw, minx, miny, n, nxcells, nycells, sumboxh, sumboxw,
+        _this = this;
+      minx = Infinity;
+      maxx = -Infinity;
+      miny = Infinity;
+      maxy = -Infinity;
+      sumboxw = 0;
+      sumboxh = 0;
+      minboxw = Infinity;
+      minboxh = Infinity;
+      _.each(this.boxes, function(box) {
+        var h, w, x, y, _ref;
+        _ref = _this.keyf(box), x = _ref[0], y = _ref[1];
+        w = x[1] - x[0];
+        h = y[1] - y[0];
+        minx = Math.min(x[0], minx);
+        maxx = Math.max(x[1], maxx);
+        miny = Math.min(y[0], miny);
+        maxy = Math.max(y[1], maxy);
+        minboxw = Math.min(w, minboxw);
+        minboxh = Math.min(h, minboxh);
+        sumboxw += w;
+        return sumboxh += h;
+      });
+      n = this.boxes.length;
+      globalw = maxx - minx;
+      globalh = maxy - miny;
+      cellw = Math.max(globalw / 30.0, sumboxw / n);
+      cellh = Math.max(globalh / 30.0, sumboxh / n);
+      if (this.gbounds == null) {
+        this.gbounds = [[minx, maxx], [miny, maxy]];
+      }
+      if (this.cellsize == null) {
+        this.cellsize = [cellw, cellh];
+      }
+      nxcells = Math.ceil(globalw / this.cellsize[0]);
+      nycells = Math.ceil(globalh / this.cellsize[1]);
+      this.ncells = [nxcells, nycells];
+      if (this.debug) {
+        console.log("global: " + this.gbounds);
+        console.log("cellsize: " + this.cellsize);
+        return console.log("ncells: " + this.ncells);
+      }
+    };
+
+    SpatialIndex.prototype.createIndex = function() {
+      var ncells, nx, ny, _ref,
+        _this = this;
+      _ref = this.ncells, nx = _ref[0], ny = _ref[1];
+      ncells = (nx + 1) * (ny + 1);
+      this.cells = _.times(ncells, function() {
+        return new gg.util.MArray();
+      });
+      _.each(this.boxes, function(box, boxidx) {
+        return _this.add(box, boxidx);
+      });
+      if (this.debug) {
+        return console.log("created " + ncells + " cells in index");
+      }
+    };
+
+    SpatialIndex.prototype.add = function(box, boxidx) {
+      var cellbound,
+        _this = this;
+      if (boxidx == null) {
+        boxidx = null;
+      }
+      if (boxidx == null) {
+        boxidx = this.boxes.add(box);
+      }
+      cellbound = this.box2cellbound(box);
+      return this.eachCell(cellbound, function(cell, pos) {
+        return cell.add(boxidx);
+      });
+    };
+
+    SpatialIndex.prototype.rm = function(box) {
+      var bound, boxIdxs, cellbound, val,
+        _this = this;
+      val = this.valf(box);
+      bound = this.keyf(box);
+      cellbound = this.bound2cellbound(bound);
+      boxIdxs = {};
+      this.eachCell(cellbound, function(cell, pos) {
+        var boxIdx, cellIdx, _i, _len, _results;
+        _results = [];
+        for (cellIdx = _i = 0, _len = cell.length; _i < _len; cellIdx = ++_i) {
+          boxIdx = cell[cellIdx];
+          if (boxIdx == null) {
+            continue;
+          }
+          if (boxIdx in boxIdxs) {
+            continue;
+          }
+          box = _this.boxes[boxIdx];
+          if (_this.valf(box) === val) {
+            cell.rmIdx(cellIdx);
+            _results.push(boxIdxs[boxIdx] = true);
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      });
+      _.each(boxIdxs, function(ignore, boxIdx) {
+        return _this.boxes.rmIdx(boxIdx);
+      });
+      return _.size(boxIdxs);
+    };
+
+    SpatialIndex.prototype.get = function(bound) {
+      var boxIdxs, cellbound, ret,
+        _this = this;
+      ret = {};
+      boxIdxs = {};
+      cellbound = this.bound2cellbound(bound);
+      this.eachCell(cellbound, function(cell, pos) {
+        return _.each(cell, function(boxIdx) {
+          if (boxIdx == null) {
+            return;
+          }
+          if (_this.boxes[boxIdx] == null) {
+            return;
+          }
+          return boxIdxs[boxIdx] = true;
+        });
+      });
+      return _.compact(_.map(boxIdxs, function(ignore, boxidx) {
+        if (_this.intersects(_this.keyf(_this.boxes[boxidx]), bound)) {
+          return _this.boxes[boxidx];
+        }
+      }));
+    };
+
+    SpatialIndex.prototype.getSlow = function(bound) {
+      var _this = this;
+      return _.compact(_.map(this.boxes, function(box) {
+        if ((box != null) && (_this.intersects(bound, _this.keyf(box)))) {
+          return box;
+        }
+      }));
+    };
+
+    SpatialIndex.prototype.cellbound2boxidxs = function(cellbound) {};
+
+    SpatialIndex.prototype.eachCell = function(cellbound, f) {
+      var cell, cellidx, cellx, celly, x, y, _i, _ref, _ref1, _results;
+      cellx = cellbound[0];
+      celly = cellbound[1];
+      _results = [];
+      for (x = _i = _ref = cellx[0], _ref1 = cellx[1]; _ref <= _ref1 ? _i <= _ref1 : _i >= _ref1; x = _ref <= _ref1 ? ++_i : --_i) {
+        _results.push((function() {
+          var _j, _ref2, _ref3, _results1;
+          _results1 = [];
+          for (y = _j = _ref2 = celly[0], _ref3 = celly[1]; _ref2 <= _ref3 ? _j <= _ref3 : _j >= _ref3; y = _ref2 <= _ref3 ? ++_j : --_j) {
+            cellidx = this.cell2cellidx([x, y]);
+            cell = this.cells[cellidx];
+            _results1.push(f(cell, [x, y]));
+          }
+          return _results1;
+        }).call(this));
+      }
+      return _results;
+    };
+
+    SpatialIndex.prototype.intersects = function(b1, b2) {
+      var maxs, mins, ret;
+      mins = [b1[0][0], b1[1][0], b2[0][0], b2[1][0]];
+      maxs = [b2[0][1], b2[1][1], b1[0][1], b1[1][1]];
+      ret = !(_.any(_.zip(mins, maxs), (function(_arg) {
+        var max, min;
+        min = _arg[0], max = _arg[1];
+        return min >= max;
+      })));
+      return ret;
+    };
+
+    SpatialIndex.prototype.cell2cellidx = function(cell) {
+      return cell[0] + this.ncells[0] * cell[1];
+    };
+
+    SpatialIndex.prototype.box2cellbound = function(box) {
+      var bound;
+      bound = this.keyf(box);
+      return this.bound2cellbound(bound);
+    };
+
+    SpatialIndex.prototype.bound2cellbound = function(_arg) {
+      var maxcell, mincell, x, y;
+      x = _arg[0], y = _arg[1];
+      mincell = this.pt2cell([x[0], y[0]]);
+      maxcell = this.pt2cell([x[1], y[1]]);
+      return [[mincell[0], maxcell[0]], [mincell[1], maxcell[1]]];
+    };
+
+    SpatialIndex.prototype.pt2cell = function(_arg) {
+      var x, xcell, y, ycell;
+      x = _arg[0], y = _arg[1];
+      xcell = Math.floor((x - this.gbounds[0][0]) / this.cellsize[0]);
+      ycell = Math.floor((y - this.gbounds[1][0]) / this.cellsize[1]);
+      return [xcell, ycell];
+    };
+
+    SpatialIndex.prototype.intersection = function(box) {};
+
+    return SpatialIndex;
 
   })();
 
@@ -7063,28 +7389,6 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
 
   })(gg.wf.Node);
 
-  gg.wf.Optimizer = (function() {
-
-    function Optimizer(rules) {
-      this.rules = rules;
-    }
-
-    Optimizer.prototype.optimize = function(flow) {
-      return flow;
-    };
-
-    return Optimizer;
-
-  })();
-
-  gg.wf.Rule = (function() {
-
-    function Rule() {}
-
-    return Rule;
-
-  })();
-
   gg.stat.Stat = (function(_super) {
 
     __extends(Stat, _super);
@@ -7313,130 +7617,27 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
 
   })(gg.geom.Geom);
 
-  gg.wf.Runner = (function(_super) {
+  gg.wf.Optimizer = (function() {
 
-    __extends(Runner, _super);
-
-    function Runner(root) {
-      this.root = root;
-      this.log = gg.util.Log.logger("Runner", gg.util.Log.WARN);
+    function Optimizer(rules) {
+      this.rules = rules;
     }
 
-    Runner.prototype.run = function() {
-      var cur, filled, firstUnready, nextNode, nprocessed, queue, results, seen, _i, _len, _ref,
-        _this = this;
-      queue = new gg.util.UniqQueue([this.root]);
-      seen = {};
-      results = [];
-      nprocessed = 0;
-      firstUnready = null;
-      while (!queue.empty()) {
-        cur = queue.pop();
-        if (cur == null) {
-          continue;
-        }
-        if (cur.id in seen) {
-          continue;
-        }
-        this.log("run " + cur.name + " id:" + cur.id + " with " + (cur.nChildren()) + " children");
-        if (cur.ready()) {
-          nprocessed += 1;
-          if (!cur.nChildren()) {
-            cur.addOutputHandler(0, function(id, result) {
-              return _this.emit("output", id, result.table);
-            });
-          }
-          cur.run();
-          seen[cur.id] = true;
-          _ref = _.compact(_.flatten(cur.children));
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            nextNode = _ref[_i];
-            if (!(nextNode in seen)) {
-              queue.push(nextNode);
-            }
-          }
-        } else {
-          filled = _.map(cur.inputs, function(v) {
-            return v != null;
-          });
-          this.log("not ready " + cur.name + " id: " + cur.id + ".  " + cur.inputs.length + ", " + cur.children.length);
-          if (firstUnready === cur) {
-            if (nprocessed === 0) {
-              this.log("" + cur.name + " inputs buffer: " + cur.inputs.length);
-              this.log("" + cur.name + " ninputs filled: " + filled);
-              this.log("" + cur.name + " parents: " + (_.map(cur.parents, function(p) {
-                return p.name;
-              }).join(',')));
-              this.log("" + cur.name + " children: " + (_.map(cur.children, function(p) {
-                return p.name;
-              }).join(',')));
-              throw Error("could not make progress.  Stopping on " + cur.name);
-            } else {
-              firstUnready = null;
-            }
-          }
-          if (firstUnready == null) {
-            firstUnready = cur;
-            nprocessed = 0;
-          }
-          queue.push(cur);
-        }
-      }
-      return this.emit("done", true);
+    Optimizer.prototype.optimize = function(flow) {
+      return flow;
     };
 
-    return Runner;
+    return Optimizer;
 
-  })(events.EventEmitter);
+  })();
 
-  gg.wf.Source = (function(_super) {
+  gg.wf.Rule = (function() {
 
-    __extends(Source, _super);
+    function Rule() {}
 
-    function Source(spec) {
-      this.spec = spec != null ? spec : {};
-      Source.__super__.constructor.call(this, this.spec);
-      this.compute = this.spec.f || this.compute;
-      this.type = "source";
-      this.name = _.findGood([this.spec.name, "" + this.type + "-" + this.id]);
-    }
+    return Rule;
 
-    Source.prototype.compute = function() {
-      throw Error("" + this.name + ": Source not setup to generate tables");
-    };
-
-    Source.prototype.ready = function() {
-      return true;
-    };
-
-    Source.prototype.run = function() {
-      var table;
-      table = this.compute();
-      this.output(0, new gg.wf.Data(table, new gg.wf.Env));
-      return table;
-    };
-
-    return Source;
-
-  })(gg.wf.Node);
-
-  gg.wf.TableSource = (function(_super) {
-
-    __extends(TableSource, _super);
-
-    function TableSource(spec) {
-      this.spec = spec;
-      TableSource.__super__.constructor.call(this, this.spec);
-      this.table = this.spec.table;
-    }
-
-    TableSource.prototype.compute = function() {
-      return this.table;
-    };
-
-    return TableSource;
-
-  })(gg.wf.Source);
+  })();
 
   gg.facet.Facets = (function() {
 
@@ -7799,6 +8000,131 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
     return Layers;
 
   })();
+
+  gg.wf.Runner = (function(_super) {
+
+    __extends(Runner, _super);
+
+    function Runner(root) {
+      this.root = root;
+      this.log = gg.util.Log.logger("Runner", gg.util.Log.WARN);
+    }
+
+    Runner.prototype.run = function() {
+      var cur, filled, firstUnready, nextNode, nprocessed, queue, results, seen, _i, _len, _ref,
+        _this = this;
+      queue = new gg.util.UniqQueue([this.root]);
+      seen = {};
+      results = [];
+      nprocessed = 0;
+      firstUnready = null;
+      while (!queue.empty()) {
+        cur = queue.pop();
+        if (cur == null) {
+          continue;
+        }
+        if (cur.id in seen) {
+          continue;
+        }
+        this.log("run " + cur.name + " id:" + cur.id + " with " + (cur.nChildren()) + " children");
+        if (cur.ready()) {
+          nprocessed += 1;
+          if (!cur.nChildren()) {
+            cur.addOutputHandler(0, function(id, result) {
+              return _this.emit("output", id, result.table);
+            });
+          }
+          cur.run();
+          seen[cur.id] = true;
+          _ref = _.compact(_.flatten(cur.children));
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            nextNode = _ref[_i];
+            if (!(nextNode in seen)) {
+              queue.push(nextNode);
+            }
+          }
+        } else {
+          filled = _.map(cur.inputs, function(v) {
+            return v != null;
+          });
+          this.log("not ready " + cur.name + " id: " + cur.id + ".  " + cur.inputs.length + ", " + cur.children.length);
+          if (firstUnready === cur) {
+            if (nprocessed === 0) {
+              this.log("" + cur.name + " inputs buffer: " + cur.inputs.length);
+              this.log("" + cur.name + " ninputs filled: " + filled);
+              this.log("" + cur.name + " parents: " + (_.map(cur.parents, function(p) {
+                return p.name;
+              }).join(',')));
+              this.log("" + cur.name + " children: " + (_.map(cur.children, function(p) {
+                return p.name;
+              }).join(',')));
+              throw Error("could not make progress.  Stopping on " + cur.name);
+            } else {
+              firstUnready = null;
+            }
+          }
+          if (firstUnready == null) {
+            firstUnready = cur;
+            nprocessed = 0;
+          }
+          queue.push(cur);
+        }
+      }
+      return this.emit("done", true);
+    };
+
+    return Runner;
+
+  })(events.EventEmitter);
+
+  gg.wf.Source = (function(_super) {
+
+    __extends(Source, _super);
+
+    function Source(spec) {
+      this.spec = spec != null ? spec : {};
+      Source.__super__.constructor.call(this, this.spec);
+      this.compute = this.spec.f || this.compute;
+      this.type = "source";
+      this.name = _.findGood([this.spec.name, "" + this.type + "-" + this.id]);
+    }
+
+    Source.prototype.compute = function() {
+      throw Error("" + this.name + ": Source not setup to generate tables");
+    };
+
+    Source.prototype.ready = function() {
+      return true;
+    };
+
+    Source.prototype.run = function() {
+      var table;
+      table = this.compute();
+      this.output(0, new gg.wf.Data(table, new gg.wf.Env));
+      return table;
+    };
+
+    return Source;
+
+  })(gg.wf.Node);
+
+  gg.wf.TableSource = (function(_super) {
+
+    __extends(TableSource, _super);
+
+    function TableSource(spec) {
+      this.spec = spec;
+      TableSource.__super__.constructor.call(this, this.spec);
+      this.table = this.spec.table;
+    }
+
+    TableSource.prototype.compute = function() {
+      return this.table;
+    };
+
+    return TableSource;
+
+  })(gg.wf.Source);
 
   gg.wf.Split = (function(_super) {
 
@@ -10345,7 +10671,7 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
 
     Text.prototype.parseSpec = function() {
       Text.__super__.parseSpec.apply(this, arguments);
-      return this.maxAnnealSteps;
+      return this.innerLoop = _.findGood([this.spec.innerLoop, 15]);
     };
 
     Text.prototype.defaults = function() {};
@@ -10355,7 +10681,7 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
     };
 
     Text.prototype.compute = function(table, env, node) {
-      var attrs, boxes, inArr;
+      var attrs, boxes, inArr, start;
       attrs = ['x', 'y', 'text'];
       inArr = _.map(attrs, (function(attr) {
         return table.schema.inArray(attr);
@@ -10366,8 +10692,10 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
       boxes = table.each(function(row) {
         return [[row.get('x0'), row.get('x1')], [row.get('y0'), row.get('y1')], [row.get('x0'), row.get('y0')]];
       });
-      boxes = gg.pos.Text.anneal(boxes);
+      start = Date.now();
+      boxes = gg.pos.Text.anneal(boxes, this.innerLoop);
       console.log("got " + boxes.length + " boxes from annealing");
+      console.log("took " + (Date.now() - start) + " ms");
       _.each(boxes, function(box, idx) {
         var row;
         row = table.get(idx);
@@ -10379,42 +10707,48 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
       return table;
     };
 
-    Text.anneal = function(boxes) {
-      var T, box, boxIdx, boxp, cost, curScore, delta, i, level, maxi, minImprovement, n, nAccepted, nAnneal, nImproved, newScore, optimalScore, pos, pos2box, posIdx, positions, startScore, utility, _i, _j, _k, _len, _ref;
+    Text.anneal = function(boxes, innerLoop) {
+      var T, bAccept, box, box2, boxIdx, cost, curOverlap, curScore, delta, gridBounds, i, index, keyf, level, minImprovement, n, nAnneal, nImproved, newOverlap, optimalScore, pos2box, posIdx, positions, startScore, utility, valf, _i, _j, _k, _len, _posIdx, _ref, _ref1, _ref2;
+      if (innerLoop == null) {
+        innerLoop = 10;
+      }
       for (_i = 0, _len = boxes.length; _i < _len; _i++) {
         box = boxes[_i];
         if (_.any(_.union(box[0], box[1]), _.isNaN)) {
           console.log("box is invalid: " + box);
           throw Error();
         }
+        if (box.length === 2) {
+          box.push([box[0][0], box[1][0]]);
+        }
       }
       n = boxes.length;
-      boxes = _.map(boxes, function(box) {
+      keyf = function(box) {
+        return box.box;
+      };
+      valf = function(box) {
+        return box.idx;
+      };
+      boxes = _.map(boxes, function(box, idx) {
         var h, w;
         w = box[0][1] - box[0][0];
         h = box[1][1] - box[1][0];
         return {
           box: box,
+          idx: idx,
           pos: 0,
           bound: [[box[0][0] - w, box[0][1]], [box[1][0] - h, box[1][1]]]
         };
       });
+      gridBounds = this.bounds(_.map(boxes, function(box) {
+        return box.bound;
+      }));
       _ref = this.genPositions(), pos2box = _ref[0], positions = _ref[1];
+      index = new gg.util.SpatialIndex(keyf, valf).gridBounds(gridBounds).load(boxes);
       utility = function(boxes) {
-        var i, j, nOverlap, _j, _k, _len1, _len2, _ref1, _ref2;
-        nOverlap = 0;
-        _ref1 = _.range(n);
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          i = _ref1[_j];
-          _ref2 = _.range(i + 1, n);
-          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-            j = _ref2[_k];
-            if (gg.pos.Text.bOverlap(boxes[i].box, boxes[j].box)) {
-              nOverlap += 1;
-            }
-          }
-        }
-        return -nOverlap;
+        return -_.sum(_.map(boxes, function(box) {
+          return index.get(box.box).length;
+        }));
       };
       level = this.log.level;
       this.log.level = gg.util.Log.DEBUG;
@@ -10423,42 +10757,42 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
       minImprovement = 0;
       optimalScore = 0;
       for (nAnneal = _j = 0; _j < 10; nAnneal = ++_j) {
-        maxi = n * 15;
-        nAccepted = 0;
         nImproved = 0;
         startScore = curScore;
-        console.log("\n\n");
-        for (i = _k = 0; 0 <= maxi ? _k < maxi : _k > maxi; i = 0 <= maxi ? ++_k : --_k) {
-          posIdx = Math.floor(Math.random() * positions.length);
+        for (i = _k = 0, _ref1 = n * innerLoop; 0 <= _ref1 ? _k < _ref1 : _k > _ref1; i = 0 <= _ref1 ? ++_k : --_k) {
+          _posIdx = Math.floor(Math.random() * positions.length);
           boxIdx = Math.floor(Math.random() * n);
-          pos = positions[posIdx];
-          cost = pos[1];
+          _ref2 = positions[_posIdx], posIdx = _ref2[0], cost = _ref2[1];
           box = boxes[boxIdx];
-          boxp = pos2box(box, posIdx);
-          boxes[boxIdx] = boxp;
-          newScore = utility(boxes);
-          delta = newScore - curScore;
-          if (newScore > curScore) {
-            this.log("new score: anneal(" + nAnneal + ") iter(" + i + ") " + newScore + " vs " + curScore + " ");
+          box2 = pos2box(box, posIdx);
+          curOverlap = index.get(box.box).length;
+          index.rm(box);
+          index.add(box2);
+          newOverlap = index.get(box2.box).length;
+          delta = curOverlap - newOverlap;
+          if (delta > 0) {
             nImproved += 1;
+            this.log("new score: anneal(" + nAnneal + ") iter(" + i + ") " + delta);
           }
-          if (newScore < curScore && Math.random() > 1.0 - Math.exp(-delta / T)) {
-            boxes[boxIdx] = box;
+          bAccept = delta > 0 || Math.random() <= 1 - Math.exp(-delta / T);
+          if (bAccept) {
+            boxes[boxIdx] = box2;
           } else {
-            nAccepted += 1;
-            curScore = newScore;
+            index.rm(box2);
+            index.add(box);
           }
           if (nImproved >= n * 5) {
             this.log("nImproved " + nImproved + " >= n*5 " + (n * 5));
             break;
           }
         }
+        curScore = utility(boxes);
         if (nImproved === 0) {
           this.log("0 improvements after " + i + " iter at temperature " + T + ", breaking");
           break;
         }
         if (!(curScore > startScore + minImprovement)) {
-          this.log("score didn't improve after " + i + " iter at temperature " + T + ", " + curScore + " < " + startScore);
+          this.log("no improvments: iter " + i + " temp: " + T + ", " + curScore + " < " + startScore);
           break;
         }
         if (curScore >= optimalScore) {
@@ -10487,9 +10821,9 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
     };
 
     Text.genPositions = function() {
-      var pos2box, positions;
-      positions = {
-        0: 0,
+      var maxCost, pos2box, posCosts, positions;
+      posCosts = {
+        0: 1,
         1: 1,
         2: 1,
         3: 1,
@@ -10498,8 +10832,12 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
         6: 2,
         7: 2
       };
-      positions = _.map(positions, function(v, k) {
-        return [k, v];
+      maxCost = 1 + _.mmax(_.values(posCosts));
+      positions = [];
+      _.each(_.values(posCosts), function(cost, pos) {
+        return _.times(maxCost - cost, function() {
+          return positions.push([pos, cost]);
+        });
       });
       pos2box = function(box, position) {
         var h, pt, w, x, y;
@@ -10531,10 +10869,24 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
         })();
         return {
           box: [[pt[0], pt[0] + w], [pt[1], pt[1] + h], box.box[2]],
-          pos: position
+          idx: box.idx,
+          pos: position,
+          bound: box.bound
         };
       };
       return [pos2box, positions];
+    };
+
+    Text.bounds = function(boxes) {
+      var f;
+      f = function(memo, box) {
+        memo[0][0] = Math.min(memo[0][0], box[0][0]);
+        memo[0][1] = Math.max(memo[0][1], box[0][1]);
+        memo[1][0] = Math.min(memo[1][0], box[1][0]);
+        memo[1][1] = Math.max(memo[1][1], box[1][1]);
+        return memo;
+      };
+      return _.reduce(boxes, f, [[Infinity, -Infinity], [Infinity, -Infinity]]);
     };
 
     return Text;

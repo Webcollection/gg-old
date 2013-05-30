@@ -86,7 +86,7 @@
   var finalRects = {
     "geom": "rect",
     "aes": { "fill-opacity": 0.8 },
-    "pos": "text"
+    "pos": {type: "text", fast: true}
   };
 
   var base_spec = {
@@ -123,6 +123,7 @@
 
 
   var genboxes = function(n) {
+    Math.seedrandom(0);
     var pw = 250,
         ph = 200,
         lw = 30,
@@ -146,6 +147,7 @@
   };
 
   var render = function(data) {
+    Math.seedrandom()
     var ex   = function () {
       $("#ex").empty();
       return d3.select('#ex').append('span');
