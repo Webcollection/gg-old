@@ -86,7 +86,7 @@
   var finalRects = {
     "geom": "rect",
     "aes": { "fill-opacity": 0.8 },
-    "pos": "text"
+    "pos": {type: "text", innerLoop: 5}
   };
 
   var base_spec = {
@@ -152,7 +152,7 @@
     };
 
     $("#spec").text(JSON.prettify(spec));
-    var plot = gg(spec);
+    var plot = gg(JSON.parse(JSON.stringify(spec)));
     plot.render(ex(), data);
   }
 
