@@ -86,7 +86,7 @@
   var finalRects = {
     "geom": "rect",
     "aes": { "fill-opacity": 0.8 },
-    "pos": {type: "text", fast: true}
+    "pos": {type: "text", innerLoop: 5}
   };
 
   var base_spec = {
@@ -123,9 +123,8 @@
 
 
   var genboxes = function(n) {
-    Math.seedrandom(0);
-    var pw = 250,
-        ph = 200,
+    var pw = 550,
+        ph = 500,
         lw = 30,
         lh = 15,
         genpt = function() {
@@ -147,7 +146,6 @@
   };
 
   var render = function(data) {
-    Math.seedrandom()
     var ex   = function () {
       $("#ex").empty();
       return d3.select('#ex').append('span');
@@ -160,26 +158,19 @@
 
   var toggle = (function(){
     var show = false;
-    function _toggle() {
-      $("g.layer-1").toggle();
-      return;
-      Math.seedrandom(show+"");
-      show = !show;
-      spec = JSON.parse(JSON.stringify(base_spec));
-      if (show)
-        spec.layers = [finalRects].concat(spec.layers);
-      render(data);
-    };
+    function _toggle() { $("g.layer-1").toggle(); };
     return _toggle;
   })();
 
 
-  var data = genboxes(30);
+  Math.seedrandom(0);
+  var nboxes = 150;
+  var data = genboxes(nboxes);
   var spec = base_spec;
 
   $(document).ready(function() {
     $("#btn").click(function() {
-      data = genboxes(30);
+      data = genboxes(nboxes);
       render(data);
     });
     $("#toggle").click(toggle);

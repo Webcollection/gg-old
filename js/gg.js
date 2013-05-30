@@ -10670,8 +10670,11 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
     Text.aliases = ["text"];
 
     Text.prototype.parseSpec = function() {
+      var attrs;
       Text.__super__.parseSpec.apply(this, arguments);
-      return this.innerLoop = _.findGood([this.spec.innerLoop, 15]);
+      this.innerLoop = _.findGood([this.spec.innerLoop, 15]);
+      attrs = ['T', 't', 'temp', 'temperature'];
+      return this.temperature = _.findGoodAttr(this.spec, attrs, 2.466303);
     };
 
     Text.prototype.defaults = function() {};
@@ -10693,7 +10696,7 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
         return [[row.get('x0'), row.get('x1')], [row.get('y0'), row.get('y1')], [row.get('x0'), row.get('y0')]];
       });
       start = Date.now();
-      boxes = gg.pos.Text.anneal(boxes, this.innerLoop);
+      boxes = gg.pos.Text.anneal(boxes, this.innerLoop, this.temperature);
       console.log("got " + boxes.length + " boxes from annealing");
       console.log("took " + (Date.now() - start) + " ms");
       _.each(boxes, function(box, idx) {
@@ -10707,11 +10710,8 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
       return table;
     };
 
-    Text.anneal = function(boxes, innerLoop) {
-      var T, bAccept, box, box2, boxIdx, cost, curOverlap, curScore, delta, gridBounds, i, index, keyf, level, minImprovement, n, nAnneal, nImproved, newOverlap, optimalScore, pos2box, posIdx, positions, startScore, utility, valf, _i, _j, _k, _len, _posIdx, _ref, _ref1, _ref2;
-      if (innerLoop == null) {
-        innerLoop = 10;
-      }
+    Text.anneal = function(boxes, innerLoop, T) {
+      var bAccept, box, box2, boxIdx, cost, curOverlap, curScore, delta, gridBounds, i, index, keyf, level, minImprovement, n, nAnneal, nImproved, newOverlap, optimalScore, pos2box, posIdx, positions, startScore, utility, valf, _i, _j, _k, _len, _posIdx, _ref, _ref1, _ref2;
       for (_i = 0, _len = boxes.length; _i < _len; _i++) {
         box = boxes[_i];
         if (_.any(_.union(box[0], box[1]), _.isNaN)) {
@@ -10753,7 +10753,6 @@ var gg = window.gg = {'coord':{},'core':{},'data':{},'facet':{},'geom':{'reparam
       level = this.log.level;
       this.log.level = gg.util.Log.DEBUG;
       curScore = utility(boxes);
-      T = 2.466303;
       minImprovement = 0;
       optimalScore = 0;
       for (nAnneal = _j = 0; _j < 10; nAnneal = ++_j) {
