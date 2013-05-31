@@ -27,6 +27,9 @@
   #toggle:hover {
     color: blue;
   }
+  button {
+    font-size: 25pt; font-family:Gill Sans;
+  }
 </style>
 
 </head>
@@ -42,9 +45,15 @@
 
 <div style="width: 900px; float: left;">
   <div id="ex"></div>
-  <div><button style="width: 900px; font-size: 25pt; font-family:Gill Sans;" id="btn">
-    Randomize layout
-  </button></div>
+  <div style="width: 900px">
+    <button style="width: 450px; float: left;" id="btn">
+     Generate new data
+    </button>
+    <button style="width: 450px; float:right;" id="newlayout">
+     Rerun Annealing
+    </button>
+    <div style="clear:both"></div>
+  </div>
 
 </div>
 <div style="width: 20em; height: auto; float: left; margin-left: 2em;">
@@ -86,7 +95,7 @@
   var finalRects = {
     "geom": "rect",
     "aes": { "fill-opacity": 0.8 },
-    "pos": {type: "text", innerLoop: 5}
+    "pos": {type: "text", fast:true, innerLoop: 10}
   };
 
   var base_spec = {
@@ -173,6 +182,10 @@
       data = genboxes(nboxes);
       render(data);
     });
+    $("#newlayout").click(function() {
+      render(data);
+    });
+
     $("#toggle").click(toggle);
     render(data);
   });
