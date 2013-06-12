@@ -39,7 +39,7 @@
       <a href="http://www.mit.edu/~eugenewu/index.html" style="font-weight: bold; margin-right: 10px">
       Eugene Wu
       </a>
-    <a href="http://sirrice.github.io/gg">gg</a>
+    <a href="/gg">gg</a>
     <a href="http://github.com/sirrice/gg">Github</a>
     </div>
     </div>
@@ -95,8 +95,8 @@
 <script>
   var finalRects = {
     "geom": "rect",
-    "aes": { "fill-opacity": 0.8 },
-    "pos": {type: "text", fast:true, innerLoop: 10}
+    "aes": { "opacity": 0.8 },
+    "pos": {type: "text", fast:true, innerLoop: 15}
   };
 
   var base_spec = {
@@ -113,17 +113,20 @@
       {
         "geom": "text",
         "aes": { color: "black" },
-        "scales": { fill: "identity" }
+        "scales": { color: "identity" }
       }
     ],
     aes: {
       x: "x0",
       y: "y0",
       text: "id",
-      color: "id"
+      color: "id",
+      'stroke-width': 0
     },
     "scales": {
-      "fill-opacity": "identity",
+      "color": "color",
+      'stroke-width': 'identity',
+      "opacity": "identity",
     },
     "options": {
       "w": 900,
@@ -168,7 +171,7 @@
 
   var toggle = (function(){
     var show = false;
-    function _toggle() { $("g.layer-1").toggle(); };
+    function _toggle() { $(".layer-1").toggle(); };
     return _toggle;
   })();
 

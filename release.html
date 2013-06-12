@@ -36,7 +36,7 @@
       <a href="http://www.mit.edu/~eugenewu/index.html" style="font-weight: bold; margin-right: 10px">
       Eugene Wu
       </a>
-    <a href="http://sirrice.github.io/gg">gg</a>
+    <a href="/gg">gg</a>
     <a href="http://github.com/sirrice/gg">Github</a>
     </div>
     </div>
@@ -56,7 +56,7 @@
       geom:{
         type: "rect",
         aes: {
-          y: "{total/100}"
+          y: "{total/10}"
         }
       },
       stat: "bin"
@@ -131,7 +131,7 @@
 </html>
 
 <script>
-  var npts = 1000;
+  var npts = 100;
   var block = Math.max(1, Math.floor(npts / 3 / 5));
 
   var floor500 = function(row) {
